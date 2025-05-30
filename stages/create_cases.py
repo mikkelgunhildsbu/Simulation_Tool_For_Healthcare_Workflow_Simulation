@@ -31,7 +31,7 @@ class CreateCases:
                     self.queues["accessioning_queue"].put(case)
 
                 print(
-                    f"Day {current_day}: Created {num_arrivals[current_day]} new cases at {convert_to_real_time(self.sim_start_time, self.env.now)}")
+                    f"Created {num_arrivals[current_day]} new cases at {convert_to_real_time(self.sim_start_time, self.env.now)}")
 
             yield self.env.timeout(60)
 

@@ -9,7 +9,7 @@ class GlobalParameters:
     service_scanning = 15
     service_automaticEmbedding = 25
 
-    sim_days = 1
+    sim_days = 3
     sim_duration = 23.5 * 60
     number_of_runs = 3
 
@@ -36,3 +36,6 @@ class GlobalParameters:
     num_staining_machines = 6
     num_stainingIHC_machines = 2
     num_automatic_embedding_machines = 2
+
+
+

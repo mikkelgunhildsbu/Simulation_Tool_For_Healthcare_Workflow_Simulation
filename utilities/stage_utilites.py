@@ -159,7 +159,7 @@ def get_sampled_duration(actor_ref, activity):
         return lognorm.rvs(shape, loc=loc, scale=scale)
     else:
         rows = _actor_dis_df[
-            (_actor_dis_df['activity'] == activity) & (_actor_dis_df['speed_level'] == 'medium')
+            (_actor_dis_df['activity'] == activity) #& (_actor_dis_df['speed_level'] == 'medium')
             ]
         if not rows.empty:
             s, loc, sc = rows.iloc[0][['shape', 'loc', 'scale']]

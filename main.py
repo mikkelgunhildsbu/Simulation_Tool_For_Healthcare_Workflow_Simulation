@@ -3,16 +3,17 @@ import pandas as pd
 import simpy
 from datetime import datetime
 
-
+from components.serviceTimes.calculate_service_times import update_service_time
 from utilities.get_event_log import get_log
 from global_parameters import GlobalParameters as g
 from pathology_model import PathologyModel
 from simSetup.queues import create_queues
 
 from simSetup.queue_initializer import initialize_from_event_log
+from utilities.static_daily_configs_dict import daily_configs_static
 
-
-use_queue = True
+# For initializing queue states
+use_queue = False
 
 
 def build_initial_queue(event_log):
@@ -44,18 +45,19 @@ def run_day(start_time, carry_in_queue=None):
     queue_lengths = pm.queue_after
     return carry_q, pm.results_df, queue_lengths
 
-def main():
 
-    today = datetime.now()
+def main():
+    today = datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
     if use_queue:
         event_log = get_log(today, today - pd.Timedelta(weeks=4))
+        update_service_time(event_log)
+        #getForcast(date)
         sim_start_time, initial_queue = build_initial_queue(event_log)
     else:
         sim_start_time = today
         initial_queue = None
 
     safe_ts = sim_start_time.strftime("%Y-%m-%d_%H-%M-%S")
-
 
     all_logs = []
     all_throughput = []
@@ -69,6 +71,10 @@ def main():
         for day_offset in range(g.sim_days):
             day_start = sim_start_time + pd.Timedelta(days=day_offset)
 
+            day_config = daily_configs_static[day_offset]
+            for attr, val in day_config.items():
+                setattr(g, attr, val)
+
             carry_queue, result_df, queue_length = run_day(day_start, carry_queue)
 
             if result_df is not None:
@@ -79,9 +85,9 @@ def main():
 
                 tp = (
                     result_df['Activity']
-                    .value_counts()
-                    .rename_axis('activity')
-                    .reset_index(name='throughput')
+                        .value_counts()
+                        .rename_axis('activity')
+                        .reset_index(name='throughput')
                 )
                 tp['run'] = run_id
                 tp['day'] = day_offset + 1
@@ -112,18 +118,19 @@ def main():
                 all_queue_lengths.append(ql)
 
     df = pd.concat(all_logs, ignore_index=True)
-    df.to_csv(f"sim_logs_example.csv", index=False)
+    df.to_csv(f"results/sim_logs_example.csv", index=False)
 
     tp_df = pd.concat(all_throughput, ignore_index=True)
-    #tp_df.to_csv(f"sim_throughput_{safe_ts}.csv", index=False)
+    tp_df.to_csv(f"results/sim_throughput.csv", index=False)
 
     ql_df = pd.concat(all_queue_lengths, ignore_index=True)
-    #ql_df.to_csv(f"sim_queue_lengths_{safe_ts}.csv", index=False)
+    ql_df.to_csv(f"results/sim_queue_lengths.csv", index=False)
 
     tat_df = pd.DataFrame(all_tat_stats)
-    #tat_df.to_csv(f"sim_tat_{safe_ts}.csv", index=False)
+    tat_df.to_csv(f"results/sim_turn_around_times.csv", index=False)
 
     print(f"Simulation complete for {sim_start_time.date()}. Files saved with timestamp: {safe_ts}")
+
 
 if __name__ == "__main__":
     main()

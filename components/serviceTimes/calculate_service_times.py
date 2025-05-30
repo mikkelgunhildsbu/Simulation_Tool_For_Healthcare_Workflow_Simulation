@@ -177,11 +177,6 @@ def update_service_time(event_log):
 
     actor_speeds = actor_speeds.merge(durations_list, on=['actor_ref', 'activity'], how='left')
 
-    def trim_percentiles(durations, lower_pct=6.5, upper_pct=93.5):
-        lower_bound = np.percentile(durations, lower_pct)
-        upper_bound = np.percentile(durations, upper_pct)
-        return [x for x in durations if lower_bound <= x <= upper_bound]
-
     records = []
 
     """
@@ -216,7 +211,10 @@ def update_service_time(event_log):
 
     lookup = level_dist_fits[['activity', 'speed_level', 'shape', 'loc', 'scale']]
     actor_speeds = actor_speeds.merge(lookup, on=['activity', 'speed_level'], how='left')
+    actor_speeds = actor_speeds.drop(columns=['speed_level','avg_duration_minutes', 'all_durations'], errors='ignore')
 
-    actor_speeds.to_csv('../actorDurations/actor_speeds.csv', index=False)
+    #actor_speeds = actor_speeds.merge(lookup, on=['activity, speed_level'], how='left')
+
+    actor_speeds.to_csv('components/serviceTimes/actor_speeds.csv', index=False)
 
     return actor_speeds

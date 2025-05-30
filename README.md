@@ -5,6 +5,20 @@ This repository is part of a master’s thesis focused on developing a discrete 
 
 ⚠️ Due to privacy and data protection constraints, the full implementation and dataset are not publicly available. As a result, not all intended features are functional in this public version. However, the repository demonstrates core simulation functionality.
 
+### Thesis Components
+
+This repository includes the implementation of **all components referenced throughout the thesis**, structured as follows:
+
+- **`stages/`** – Contains the implementation of all histology workflow stages (e.g., accessioning, grossing, embedding, staining, etc).
+- **`simSetup/`** – Handles the simulation setup, including queue creation, resource allocation, and initializing queue state.
+- **`components/`** – Includes case arrival, case attributes, case splitting, rework handling, and service time distributions.
+- **`FrontEnd/`** – Contains the web application interface for interacting with or visualizing the simulation.
+- **`tests/`** – Provides validation scripts for comparing simulation output against historical data.
+
+> **Note:** Some paths and data sources are removed due to privacy constraints, but the full simulation logic and structure are intact.
+
+
+
 ###How to Run the Simulation
 
 1. Clone or fork the repository:
@@ -26,14 +40,4 @@ pip install -r requirments.txt
 
 `python main.py`
 
-### Thesis Components
-
-This repository includes the implementation of **all components referenced throughout the thesis**, structured as follows:
-
-- **`stages/`** – Contains the implementation of all histology workflow stages (e.g., accessioning, grossing, embedding, staining, etc).
-- **`simSetup/`** – Handles the simulation setup, including queue creation, resource allocation, and initializing queue state.
-- **`components/`** – Includes case arrival, case attributes, case splitting, rework handling, and service time distributions.
-- **`FrontEnd/`** – Contains the web application interface for interacting with or visualizing the simulation.
-- **`tests/`** – Provides validation scripts for comparing simulation output against historical data.
-
-> **Note:** Some paths and data sources are removed due to privacy constraints, but the full simulation logic and structure are intact.
+4. The result (througput, queue lengths, turnaround time and event log) can be seen in **`results/`**

@@ -1,3 +1,7 @@
+"""
+Dictionary to assign actors to stages for demonstration of multiple day simulation
+"""
+
 daily_configs_static = [
     {
         'accessioning_nurses': [50, 45, 297],
