@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pathology Simulation Parameters</title>
+    <!-- Bootstrap 5 CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- Your custom CSS (note the filename and folder) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='syle.css') }}">
+  </head>
+  <body>
+    <div class="container my-4">
+      <h1 class="mb-4 text-center">Adjust Simulation Parameters</h1>
+
+      <div id="queue-state" class="mb-4 text-center">
+        <h2>Waiting for Queue Lengths...</h2>
+      </div>
+
+      <!-- Main Form -->
+      <form method="POST" action="http://127.0.0.1:5000/">
+        <!-- General Simulation Settings -->
+        <div class="form-section">
+          <h2>General Simulation Settings</h2>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="sim_days" class="form-label">Simulation Days</label>
+              <input type="number" class="form-control" id="sim_days" name="sim_days" value="{{ parameters.sim_days }}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="number_of_runs" class="form-label">Number of Runs</label>
+              <input type="number" class="form-control" id="number_of_runs" name="number_of_runs" value="{{ parameters.number_of_runs }}">
+            </div>
+          </div>
+        </div>
+
+        <!-- Actor Settings for Each Simulation Day -->
+        <div id="actor-machine-settings-container"></div>
+
+        <!-- Machine Settings (Static Section) -->
+        <div class="form-section">
+          <h2>Machine Settings Day DAY</h2>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="num_staining_machines" class="form-label">Number of Automatic Staining Machines</label>
+              <input type="number" class="form-control" id="num_staining_machines" name="num_staining_machines" value="{{ parameters.num_staining_machines }}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="num_automatic_embedding_machines" class="form-label">Number of Automatic Embedding Machines</label>
+              <input type="number" class="form-control" id="num_automatic_embedding_machines" name="num_automatic_embedding_machines" value="{{ parameters.num_automatic_embedding_machines }}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="num_stainingIHC_machines" class="form-label">Number of StainingIHC Machines</label>
+              <input type="number" class="form-control" id="num_stainingIHC_machines" name="num_stainingIHC_machines" value="{{ parameters.num_stainingIHC_machines }}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="num_scanning_machines" class="form-label">Number of Scanning Machines</label>
+              <input type="number" class="form-control" id="num_scanning_machines" name="num_scanning_machines" value="{{ parameters.num_scanning_machines }}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="num_processing_machines" class="form-label">Number of Processing Machines</label>
+              <input type="number" class="form-control" id="num_processing_machines" name="num_processing_machines" value="{{ parameters.num_processing_machines }}">
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center mb-4">
+          <button type="submit" class="btn btn-primary">Update Parameters</button>
+        </div>
+      </form>
+
+      <div class="text-center mb-4">
+        <a href="http://127.0.0.1:5000/run_simulation" class="btn btn-success">Run Simulation</a>
+      </div>
+    </div>
+
+    <!-- Template for Actor Settings per Simulation Day -->
+    <template id="actor-settings-template">
+      <div class="form-section">
+        <h2>Actor Settings Day DAY</h2>
+        <div id="update_actor"></div>
+        <div class="row g-4">
+
+          <!-- Accessioning Nurses -->
+          <div class="col-md-6 col-lg-4">
+            <div>
+              <label class="form-label">Accessioning Technician</label>
+              <div class="mb-2">Currently selected (click to remove):</div>
+              <ul id="selected-accessioning-DAY" class="selected-list">
+                {% if parameters.accessioning_nurses or parameters.accessioning_nurses_half %}
+                  {% for actor in parameters.accessioning_nurses + parameters.accessioning_nurses_half %}
+                    <li data-actor="{{ actor }}">
+                      {{ actor }} - {{ 'Half Day' if actor in parameters.accessioning_nurses_half else 'Full Day' }}
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              </ul>
+              <select class="form-select" id="select-accessioning-DAY">
+                {% for actor in nurse_options.get('accessioning', []) %}
+                  <option value="{{ actor }}">{{ actor }}</option>
+                {% endfor %}
+              </select>
+              <div class="mt-2">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-accessioning-DAY" id="full_day-accessioning-DAY" value="full" checked>
+                  <label class="form-check-label" for="full_day-accessioning-DAY">Full Day</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-accessioning-DAY" id="half_day-accessioning-DAY" value="half">
+                  <label class="form-check-label" for="half_day-accessioning-DAY">Half Day</label>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addActorWithShift('accessioning', DAY)">Add Nurse</button>
+              <input type="hidden" id="input-accessioning-DAY" name="accessioning_nurses">
+            </div>
+          </div>
+
+          <!-- Grossing Nurses -->
+          <div class="col-md-6 col-lg-4">
+            <div>
+              <label class="form-label">Grossing Technician</label>
+              <div class="mb-2">Currently selected (click to remove):</div>
+              <ul id="selected-grossing-DAY" class="selected-list">
+                {% if parameters.grossing_nurses or parameters.grossing_nurses_half %}
+                  {% for actor in parameters.grossing_nurses + parameters.grossing_nurses_half %}
+                    <li data-actor="{{ actor }}">
+                      {{ actor }} - {{ 'Half Day' if actor in parameters.grossing_nurses_half else 'Full Day' }}
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              </ul>
+              <select class="form-select" id="select-grossing-DAY">
+                {% for actor in nurse_options.get('grossing', []) %}
+                  <option value="{{ actor }}">{{ actor }}</option>
+                {% endfor %}
+              </select>
+              <div class="mt-2">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-grossing-DAY" id="full_day-grossing-DAY" value="full" checked>
+                  <label class="form-check-label" for="full_day-grossing-DAY">Full Day</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-grossing-DAY" id="half_day-grossing-DAY" value="half">
+                  <label class="form-check-label" for="half_day-grossing-DAY">Half Day</label>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addActorWithShift('grossing', DAY)">Add Actor</button>
+              <input type="hidden" id="input-grossing-DAY" name="grossing_nurse">
+            </div>
+          </div>
+
+          <!-- Manual Embedding Nurses -->
+          <div class="col-md-6 col-lg-4">
+            <div>
+              <label class="form-label">Manual Embedding Technician</label>
+              <div class="mb-2">Currently selected (click to remove):</div>
+              <ul id="selected-manualEmbedding-DAY" class="selected-list">
+                {% if parameters.manualEmbedding_nurses or parameters.manualEmbedding_nurses_half %}
+                  {% for actor in parameters.manualEmbedding_nurses + parameters.manualEmbedding_nurses_half %}
+                    <li data-actor="{{ actor }}">
+                      {{ actor }} - {{ 'Half Day' if actor in parameters.manualEmbedding_nurses_half else 'Full Day' }}
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              </ul>
+              <select class="form-select" id="select-manualEmbedding-DAY">
+                {% for actor in nurse_options.get('manualembedding', []) %}
+                  <option value="{{ actor }}">{{ actor }}</option>
+                {% endfor %}
+              </select>
+              <div class="mt-2">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-manualEmbedding-DAY" id="full_day-manualEmbedding-DAY" value="full" checked>
+                  <label class="form-check-label" for="full_day-manualEmbedding-DAY">Full Day</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-manualEmbedding-DAY" id="half_day-manualEmbedding-DAY" value="half">
+                  <label class="form-check-label" for="half_day-manualEmbedding-DAY">Half Day</label>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addActorWithShift('manualEmbedding', DAY)">Add Actor</button>
+              <input type="hidden" id="input-manualEmbedding-DAY" name="manualEmbedding_nurse">
+            </div>
+          </div>
+
+          <!-- Manual Sectioning Nurses -->
+          <div class="col-md-6 col-lg-4">
+            <div>
+              <label class="form-label">Manual Sectioning Technician</label>
+              <div class="mb-2">Currently selected (click to remove):</div>
+              <ul id="selected-manualSectioning-DAY" class="selected-list">
+                {% if parameters.manualSectioning_nurses or parameters.manualSectioning_nurses_half %}
+                  {% for actor in parameters.manualSectioning_nurses + parameters.manualSectioning_nurses_half %}
+                    <li data-actor="{{ actor }}">
+                      {{ actor }} - {{ 'Half Day' if actor in parameters.manualSectioning_nurses_half else 'Full Day' }}
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              </ul>
+              <select class="form-select" id="select-manualSectioning-DAY">
+                {% for actor in nurse_options.get('manualsectioning', []) %}
+                  <option value="{{ actor }}">{{ actor }}</option>
+                {% endfor %}
+              </select>
+              <div class="mt-2">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-manualSectioning-DAY" id="full_day-manualSectioning-DAY" value="full" checked>
+                  <label class="form-check-label" for="full_day-manualSectioning-DAY">Full Day</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-manualSectioning-DAY" id="half_day-manualSectioning-DAY" value="half">
+                  <label class="form-check-label" for="half_day-manualSectioning-DAY">Half Day</label>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addActorWithShift('manualSectioning', DAY)">Add Actor</button>
+              <input type="hidden" id="input-manualSectioning-DAY" name="manualSectioning_nurse">
+            </div>
+          </div>
+
+          <!-- Decalcination Nurses -->
+          <div class="col-md-6 col-lg-4">
+            <div>
+              <label class="form-label">Decalcination Technician</label>
+              <div class="mb-2">Currently selected (click to remove):</div>
+              <ul id="selected-decalcination-DAY" class="selected-list">
+                {% if parameters.decalcination_nurses or parameters.decalcination_nurses_half %}
+                  {% for actor in parameters.decalcination_nurses + parameters.decalcination_nurses_half %}
+                    <li data-actor="{{ actor }}">
+                      {{ actor }} - {{ 'Half Day' if actor in parameters.decalcination_nurses_half else 'Full Day' }}
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              </ul>
+              <select class="form-select" id="select-decalcination-DAY">
+                {% for actor in nurse_options.get('decalcination', []) %}
+                  <option value="{{ actor }}">{{ actor }}</option>
+                {% endfor %}
+              </select>
+              <div class="mt-2">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-decalcination-DAY" id="full_day-decalcination-DAY" value="full" checked>
+                  <label class="form-check-label" for="full_day-decalcination-DAY">Full Day</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-decalcination-DAY" id="half_day-decalcination-DAY" value="half">
+                  <label class="form-check-label" for="half_day-decalcination-DAY">Half Day</label>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addActorWithShift('decalcination', DAY)">Add Actor</button>
+              <input type="hidden" id="input-decalcination-DAY" name="decalcination_nurse">
+            </div>
+          </div>
+
+          <!-- Manual Staining Nurses -->
+          <div class="col-md-6 col-lg-4">
+            <div>
+              <label class="form-label">Manual Staining Technician</label>
+              <div class="mb-2">Currently selected (click to remove):</div>
+              <ul id="selected-manualStaining-DAY" class="selected-list">
+                {% if parameters.manualStaining_nurses or parameters.manualStaining_nurses_half %}
+                  {% for actor in parameters.manualStaining_nurses + parameters.manualStaining_nurses_half %}
+                    <li data-actor="{{ actor }}">
+                      {{ actor }} - {{ 'Half Day' if actor in parameters.manualStaining_nurses_half else 'Full Day' }}
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              </ul>
+              <select class="form-select" id="select-manualStaining-DAY">
+                {% for actor in nurse_options.get('manualstaining', []) %}
+                  <option value="{{ actor }}">{{ actor }}</option>
+                {% endfor %}
+              </select>
+              <div class="mt-2">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-manualStaining-DAY" id="full_day-manualStaining-DAY" value="full" checked>
+                  <label class="form-check-label" for="full_day-manualStaining-DAY">Full Day</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-manualStaining-DAY" id="half_day-manualStaining-DAY" value="half">
+                  <label class="form-check-label" for="half_day-manualStaining-DAY">Half Day</label>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addActorWithShift('manualStaining', DAY)">Add Actor</button>
+              <input type="hidden" id="input-manualStaining-DAY" name="manualStaining_nurse">
+            </div>
+          </div>
+
+          <!-- Microscopic Analysis Doctors (Final Report) -->
+          <div class="col-md-6 col-lg-4">
+            <div>
+              <label class="form-label">Microscopic Analysis Doctors</label>
+              <div class="mb-2">Currently selected (click to remove):</div>
+              <ul id="selected-finalReportFinished-DAY" class="selected-list">
+                {% if parameters.finalReportFinished_nurses or parameters.finalReportFinished_nurses_half %}
+                  {% for actor in parameters.finalReportFinished_nurses + parameters.finalReportFinished_nurses_half %}
+                    <li data-actor="{{ actor }}">
+                      {{ actor }} - {{ 'Half Day' if actor in parameters.finalReportFinished_nurses_half else 'Full Day' }}
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              </ul>
+              <select class="form-select" id="select-finalReportFinished-DAY">
+                {% for actor in nurse_options.get('finalReportFinished', []) %}
+                  <option value="{{ actor }}">{{ actor }}</option>
+                {% endfor %}
+              </select>
+              <div class="mt-2">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-finalReportFinished-DAY" id="full_day-finalReportFinished-DAY" value="full" checked>
+                  <label class="form-check-label" for="full_day-finalReportFinished-DAY">Full Day</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="shift-finalReportFinished-DAY" id="half_day-finalReportFinished-DAY" value="half">
+                  <label class="form-check-label" for="half_day-finalReportFinished-DAY">Half Day</label>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addActorWithShift('finalReportFinished', DAY)">Add Actor</button>
+              <input type="hidden" id="input-finalReportFinished-DAY" name="finalReportFinished_nurse">
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </template>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <!-- Main JavaScript (located in your static folder) -->
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+  </body>
+</html>

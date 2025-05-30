@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulation Results</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container {
+      margin-top: 30px;
+    }
+    h2 {
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+    .card {
+      margin-bottom: 20px;
+    }
+    .graph-container {
+      text-align: center;
+      margin-bottom: 30px;
+      min-height: 300px; /* optional, helps keep space for the chart */
+    }
+    .table-container {
+      overflow-x: auto;
+    }
+    svg {
+      /* By default, let SVG fill the container if using a viewBox approach */
+      width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Page Header -->
+    <div class="text-center mb-4">
+      <h1>Simulation Results</h1>
+    </div>
+
+    <!-- Row 1: Case Arrivals & Overall Activity Graph side by side -->
+    <div class="row gx-3 align-items-stretch">
+      <!-- Left Column: Case Arrival Summary -->
+      <div class="col-md-6 d-flex">
+        <div class="card flex-fill">
+          <div class="card-header">
+            <h2>Case Arrival Summary (Avg, Min, Max)</h2>
+          </div>
+          <div class="card-body table-container">
+            {{ case_arrival_summary | safe }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Overall Activity Graph -->
+      <div class="col-md-6 d-flex">
+        <div class="card flex-fill">
+          <div class="card-header">
+            <h2>Overall Activity Summary (Graph)</h2>
+          </div>
+          <div class="card-body">
+            <div id="activitySummaryGraph" class="graph-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Actor Performance Summary (full width) -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h2>Actor Performance Summary</h2>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="actorDropdown" class="form-label">Select Actor:</label>
+              <select id="actorDropdown" class="form-select" style="width: 200px;">
+                <option value="all">All</option>
+              </select>
+            </div>
+            <div id="actorSummaryTableContainer" class="table-responsive"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Queue Data Visualization (full width) -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h2>Queue Data Visualization</h2>
+          </div>
+          <div class="card-body">
+            {% if queue_data|length > 1 %}
+            <div class="mb-3">
+              <label for="runSelector" class="form-label">Select Run:</label>
+              <select id="runSelector" class="form-select" style="width: 200px;">
+                {% for run in queue_data %}
+                <option value="{{ loop.index0 }}">Run {{ loop.index }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            <div id="queueGraph" class="graph-container"></div>
+            <h4 class="mt-4">Average Queue Lengths</h4>
+            <div id="queueAvgGraph" class="graph-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Include D3.js -->
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script>
+    // ------------------------------------------------------------------
+    // Variables provided by Flask:
+    //  - queue_data:           => queueDataAll
+    //  - queue_avg:            => queueAvgData
+    //  - activity_summary_json => activitySummaryData
+    //  - actor_summary_json    => actorSummaryData
+    //  - case_arrival_summary  => rendered as HTML
+    // ------------------------------------------------------------------
+    var queueDataAll         = {{ queue_data | safe }};
+    var queueAvgData         = {{ queue_avg | safe }};
+    var activitySummaryData  = {{ activity_summary_json | safe }};
+    var actorSummaryData     = {{ actor_summary_json | safe }};
+    var currentRunIndex      = 0;
+
+    /**
+     * Helper function to measure the parent container width so that
+     * we can size the D3 charts accordingly.
+     */
+    function getContainerWidth(elementId) {
+      const container = document.getElementById(elementId);
+      if (!container) return 800; // fallback if not found
+      return container.getBoundingClientRect().width;
+    }
+
+    // ------------------------------------------------------
+    // 1) Responsive Queue Graph Rendering
+    // ------------------------------------------------------
+    function renderQueueGraph(data, elementId, title) {
+      // Clear existing
+      d3.select("#" + elementId).html("");
+
+      // Dynamically calculate container width
+      const containerWidth = getContainerWidth(elementId);
+      const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+      const width = containerWidth - margin.left - margin.right;
+      const height = 200;
+
+      // Create an SVG with a responsive viewBox
+      const svg = d3.select("#" + elementId)
+                    .append("svg")
+                    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+                    .style("width", "100%")
+                    .style("height", "auto");
+
+      // Group for main content
+      const g = svg.append("g")
+                   .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+      const queueNames = Object.keys(data);
+      const queueValues = queueNames.map(q => ({ name: q, value: data[q] }));
+
+      // Spacing for circles
+      const spacing = width / (queueValues.length + 1);
+
+      queueValues.forEach((node, i) => {
+        node.x = i * spacing + spacing / 2;
+        node.y = height / 2;
+      });
+
+      const maxVal = d3.max(queueValues, d => d.value);
+      const colorScale = d3.scaleLinear().domain([0, maxVal]).range(["green", "red"]);
+
+      // Circles
+      g.selectAll("circle")
+       .data(queueValues)
+       .enter().append("circle")
+       .attr("cx", d => d.x)
+       .attr("cy", d => d.y)
+       .attr("r", 30)
+       .attr("fill", d => colorScale(d.value))
+       .attr("stroke", "#000")
+       .attr("stroke-width", 2);
+
+      // Circle text
+      g.selectAll(".queue-text")
+       .data(queueValues)
+       .enter().append("text")
+       .attr("class", "queue-text")
+       .attr("x", d => d.x)
+       .attr("y", d => d.y + 5)
+       .attr("text-anchor", "middle")
+       .attr("fill", "white")
+       .attr("font-size", "14px")
+       .attr("font-weight", "bold")
+       .text(d => d.value.toFixed(0));
+
+      // Labels below circles
+      g.selectAll(".node-label")
+       .data(queueValues)
+       .enter().append("text")
+       .attr("class", "node-label")
+       .attr("x", d => d.x)
+       .attr("y", d => d.y + 50)
+       .attr("text-anchor", "middle")
+       .attr("fill", "#333")
+       .attr("font-size", "12px")
+       .text(d => d.name.replace("_queue", "").replace("_", " "));
+
+      // Title
+      g.append("text")
+       .attr("x", width / 2)
+       .attr("y", -5)
+       .attr("text-anchor", "middle")
+       .attr("fill", "#000")
+       .attr("font-size", "16px")
+       .attr("font-weight", "bold")
+       .text(title);
+    }
+
+    // Initial rendering
+    renderQueueGraph(queueDataAll[currentRunIndex], "queueGraph", "Queue Data for Selected Run");
+    renderQueueGraph(queueAvgData, "queueAvgGraph", "Average Queue Lengths Across All Runs");
+
+    // If multiple runs, let user select run
+    var runSelector = document.getElementById("runSelector");
+    if (runSelector) {
+      runSelector.addEventListener("change", function() {
+        currentRunIndex = +this.value;
+        renderQueueGraph(queueDataAll[currentRunIndex], "queueGraph", "Queue Data for Selected Run");
+      });
+    }
+
+    // ------------------------------------------------------
+    // 2) Responsive Activity Summary Graph (Bar Chart)
+    // ------------------------------------------------------
+    function renderActivitySummaryGraph(data, elementId) {
+  d3.select("#" + elementId).html("");
+
+  const containerWidth = getContainerWidth(elementId);
+  const margin = { top: 40, right: 20, bottom: 60, left: 60 };
+  const width = containerWidth - margin.left - margin.right;
+  const height = 400 - margin.top - margin.bottom;
+
+  const svg = d3.select("#" + elementId)
+                .append("svg")
+                .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+                .style("width", "100%")
+                .style("height", "auto");
+
+  const g = svg.append("g")
+               .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+  const x = d3.scaleBand()
+              .domain(data.map(d => d.Activity))
+              .range([0, width])
+              .padding(0.1);
+
+  const y = d3.scaleLinear()
+              .domain([0, d3.max(data, d => +d["Total Counts (mean)"])])
+              .nice()
+              .range([height, 0]);
+
+  // X axis
+  g.append("g")
+   .attr("transform", `translate(0,${height})`)
+   .call(d3.axisBottom(x))
+   .selectAll("text")
+   .attr("transform", "rotate(-45)")
+   .style("text-anchor", "end");
+
+  // Y axis
+  g.append("g")
+   .call(d3.axisLeft(y));
+
+  // Draw bars
+  g.selectAll(".bar")
+    .data(data)
+    .enter().append("rect")
+    .attr("class", "bar")
+    .attr("x", d => x(d.Activity))
+    .attr("y", d => y(+d["Total Counts (mean)"]))
+    .attr("width", x.bandwidth())
+    .attr("height", d => height - y(+d["Total Counts (mean)"]))
+    .attr("fill", "steelblue");
+
+  // Add numeric labels to each bar
+  g.selectAll(".bar-label")
+    .data(data)
+    .enter()
+    .append("text")
+    .attr("class", "bar-label")
+    // Center the text horizontally in each bar
+    .attr("x", d => x(d.Activity) + x.bandwidth() / 2)
+    // Place the text a bit above the top of the bar
+    .attr("y", d => y(+d["Total Counts (mean)"]) - 5)
+    .attr("text-anchor", "middle")
+    .style("fill", "black")
+    .style("font-size", "12px")
+    // Format or round your numeric value as you like
+    .text(d => (+d["Total Counts (mean)"]).toFixed(0));
+
+  // Chart title
+  g.append("text")
+   .attr("x", width / 2)
+   .attr("y", -10)
+   .attr("text-anchor", "middle")
+   .style("font-size", "16px")
+   .style("font-weight", "bold")
+   .text("Activity Summary (Average Counts)");
+}
+
+    // Render activity bar chart
+    renderActivitySummaryGraph(activitySummaryData, "activitySummaryGraph");
+
+    // ------------------------------------------------------
+    // 3) Actor Performance Summary
+    // ------------------------------------------------------
+    function populateActorDropdown(data) {
+      let actorSet = new Set();
+      data.forEach(d => actorSet.add(d.Actor_ref));
+      const dropdown = document.getElementById("actorDropdown");
+      actorSet.forEach(actor => {
+        const option = document.createElement("option");
+        option.value = actor;
+        option.text = "Actor " + actor;
+        dropdown.appendChild(option);
+      });
+    }
+
+    function renderActorSummaryTable(filteredData) {
+      let html = "<table class='table table-bordered'><thead><tr>" +
+                 "<th>Actor_ref</th><th>Activity</th><th>Avg Duration</th>" +
+                 "<th>Avg Cases Completed</th><th>Min Cases Completed</th><th>Max Cases Completed</th>" +
+                 "</tr></thead><tbody>";
+      filteredData.forEach(d => {
+        html += `<tr>
+                   <td>${d.Actor_ref}</td>
+                   <td>${d.Activity}</td>
+                   <td>${(+d["Avg Duration"]).toFixed(2)}</td>
+                   <td>${(+d["Avg Cases Completed"]).toFixed(2)}</td>
+                   <td>${d["Min Cases Completed"]}</td>
+                   <td>${d["Max Cases Completed"]}</td>
+                 </tr>`;
+      });
+      html += "</tbody></table>";
+      document.getElementById("actorSummaryTableContainer").innerHTML = html;
+    }
+
+    // Populate dropdown and render table initially
+    populateActorDropdown(actorSummaryData);
+    renderActorSummaryTable(actorSummaryData);
+
+    // Dropdown event
+    document.getElementById("actorDropdown").addEventListener("change", function() {
+      const selected = this.value;
+      if (selected === "all") {
+        renderActorSummaryTable(actorSummaryData);
+      } else {
+        const filtered = actorSummaryData.filter(d => d.Actor_ref == selected);
+        renderActorSummaryTable(filtered);
+      }
+    });
+  </script>
+</body>
+</html>

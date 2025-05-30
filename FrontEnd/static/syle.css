@@ -1,0 +1,36 @@
+body {
+  background-color: #f8f9fa;
+}
+
+/* Style for sections that group form elements */
+.form-section {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+.selected-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+.selected-list li {
+  display: inline-block;
+  margin: 2px 5px;
+  padding: 5px 10px;
+  background: #e2e6ea;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.selected-list li:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
+svg {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  display: block;
+}
