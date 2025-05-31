@@ -1,4 +1,4 @@
-# Simulation tool for healthcare workflow simulation
+# Simulation Tool for Healthcare Workflow Simulation
 ###_A case study in the histology laboratory at Haukeland university hospital_
 
 This repository is part of a master’s thesis focused on developing a discrete event simulation tool for the histology laboratory at Haukeland University Hospital.
