@@ -23,11 +23,11 @@ This repository includes the implementation of **all components referenced throu
 
 1. Clone or fork the repository:
 
-`git clone https 
+`git clone https://github.com/mikkelgunhildsbu/Simulation_Tool_For_Healthcare_Workflow_Simulation.git
 `
 
 `
-cd reponame
+cd Simulation_Tool_For_Healthcare_Workflow_Simulation
 `
 
 2. Install the required dependencies:
