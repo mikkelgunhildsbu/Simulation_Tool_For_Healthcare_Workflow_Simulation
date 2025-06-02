@@ -19,7 +19,7 @@ This repository includes the implementation of **all components referenced throu
 
 
 
-### How to Run the Simulation
+### How to Run the Simulation (a scripted version)
 
 1. Clone or fork the repository:
 
