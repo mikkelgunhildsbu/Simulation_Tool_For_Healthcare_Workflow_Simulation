@@ -41,3 +41,7 @@ pip install -r requirments.txt
 `python main.py`
 
 4. The result (througput, queue lengths, turnaround time and event log) can be seen in **`results/`**
+
+> **Note:**  Configuration assignments for ten days are predefined in the file **`utilities\static_daily_config_dict.py`** for demonstration.
+
+   
